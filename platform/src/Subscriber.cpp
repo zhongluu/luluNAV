@@ -35,9 +35,9 @@ void Subscriber::listen()
                     if (!topic->dataQueue.empty()) {
                         data = topic->dataQueue.front();
                         topic->dataQueue.pop();
+                        topic->updateFlag--;
                         topic->mtx.unlock();
                     }
-                    topic->updateFlag--;
                     handleData(name, data);
                 } else {
                     topic->mtx.unlock();

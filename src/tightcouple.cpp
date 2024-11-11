@@ -1,5 +1,4 @@
 #include "tightcouple.h"
-#include "main.hpp"
 #include <iomanip>
 #include <ctime>
 #include <chrono>
@@ -7,12 +6,19 @@
 // todo: merge to the configuration of tightcouple
 #define IMU_SAMPLE_FREQ GLV_IMU_SAMPLES
 
+#ifdef USINGNOVELMETHOD
+TCNAV::TCNAV(/* args */) : isNeedInsLog(false), isNeedRawDataEcho(false), isNeedLogRawData(false),
+        isNeedInsEcho(false), isReadFromLog(false), tcINS(), BIVBekf(tcINS)
+{
+
+}
+#else
 TCNAV::TCNAV(/* args */) : isNeedInsLog(false), isNeedRawDataEcho(false), isNeedLogRawData(false),
         isNeedInsEcho(false), isReadFromLog(false), tcINS(), ekf(tcINS)
 {
 
 }
-
+#endif
 TCNAV::~TCNAV()
 {
 
@@ -74,7 +80,7 @@ bool TCNAV::setInsLogFile(const std::string& insLogPath)
     insOutLogFile.open(insLogPath);
     if (insOutLogFile.is_open()) {
         isNeedInsLog = true;
-        insOutLogFile << "lcTime pitch roll yaw velE velN velU lat lon height biasGx biasGy biasGz biasAx biasAy biasAz leverx levery leverz dt psrCorr psrRateDrift" << std::endl;
+        insOutLogFile << "lcTime pitch roll yaw velE velN velU lat lon height biasGx biasGy biasGz biasAx biasAy biasAz leverx levery leverz dt psrCorr psrRateDrift utc" << std::endl;
     } else {
         return false;
     }
@@ -95,8 +101,8 @@ bool TCNAV::setRawDataFile(const std::string& rawIMUDataPath, const std::string&
     rawGNSSlogFile.open(rawGNSSDataPath);
     if (rawIMUlogFile.is_open() && rawGNSSlogFile.is_open()) {
         isNeedLogRawData = true;
-        rawIMUlogFile << "lcTime Gyro_x Gyro_y Gyro_z Acc_x Acc_y Acc_z" << std::endl;
-        rawGNSSlogFile << "lcTime PRN type freqType PSR PSRSTD CN0 locktime satECEFx satECEFy satECEFz satclkDly lonoDly tropDly lat lon alt" << std::endl;
+        rawIMUlogFile << "lcTime Gyro_x Gyro_y Gyro_z Acc_x Acc_y Acc_z debugstamp" << std::endl;
+        rawGNSSlogFile << "lcTime PRN type freqType PSR PSRSTD CN0 locktime satECEFx satECEFy satECEFz satclkDly lonoDly tropDly lat lon alt debugstamp utc " << std::endl;
     } else {
         return false;
     }
@@ -186,7 +192,8 @@ void TCNAV::navOnlyReadRawDataTest()
 void TCNAV::navRunning()
 {
     if (isReadFromLog) {
-        _gnssWaitTime = 100000;
+        _gnssWaitTime = 10000000;
+        _tcNavState = TCNAVRunState::init;
         tcINS.insConfig("../config/insSIMconfigB.txt");
     } else {
         tcINS.insConfig("../config/insEXconfig.txt");
@@ -196,15 +203,82 @@ void TCNAV::navRunning()
 #else
     ekf.init();
 #endif
+
+#ifdef EVALUATETIME
+    auto startEvaTime = std::chrono::steady_clock::now();
+    auto endEvaTime = std::chrono::steady_clock::now();
+    
+    elipseTimeLog.open("../data/tightcouple/time.txt");
+    if (elipseTimeLog.is_open()) {
+        elipseTimeLog << "Time Log File" << std::endl;
+    }
+#endif
     const TCINSSTATE insState = tcINS.getInsState();
     std::time_t timePureInertiaWatchDog;
     auto startGPSWaitTime = std::chrono::steady_clock::now();
     auto endGPSWaitTime = std::chrono::steady_clock::now();
     uint32_t debugTimestamp = 0;
+    double utcTime = 0.0;
     while (true)
     {
         switch (_tcNavState)
         {
+        case TCNAVRunState::dropDrity:
+            gnssDataMtx.lock();
+            if (!gnssDataQueue.empty()) {
+                std::shared_ptr<SENSORMSG_GNSSDATA> pxGnssData = gnssDataQueue.front();
+                gnssDataQueue.pop();
+                gnssDataMtx.unlock();
+                if (pxGnssData == nullptr) {
+                    debugTimestamp++;
+                    if (debugTimestamp >= 30) {
+                        _tcNavState = TCNAVRunState::sync;
+                        break;
+                    } 
+                }
+            } else {
+                gnssDataMtx.unlock();
+            }
+            imuDataMtx.lock();
+            if (!imuDataQueue.empty()) {
+                imuDataQueue.pop();
+            }
+            imuDataMtx.unlock(); 
+            break;
+        case TCNAVRunState::sync:
+            gnssDataMtx.lock();
+            if (!gnssDataQueue.empty()) {
+                std::shared_ptr<SENSORMSG_GNSSDATA> pxGnssData = gnssDataQueue.front();
+                gnssDataMtx.unlock();
+                if (pxGnssData != nullptr) {
+                    imuDataMtx.lock();
+                    while (!imuDataQueue.empty()) {
+                        std::shared_ptr<SENSORMSG_IMUDATA> pxImuData = imuDataQueue.front();
+                        if (pxGnssData->gnssTime == pxImuData->imuTime) {
+                            Vector3d pos;
+                            int deg = static_cast<int>(pxGnssData->pos[0] / 100);
+                            double minsec = pxGnssData->pos[0] - deg * 100.0;
+                            pos[0] = ((deg * 1.0) + (minsec / 60.0)) * navGlv::deg2rad;
+                            deg = static_cast<int>(pxGnssData->pos[1] / 100);
+                            minsec = pxGnssData->pos[1] - deg * 100.0;
+                            pos[1] = ((deg * 1.0) + (minsec / 60.0)) * navGlv::deg2rad;
+                            pos[2] = pxGnssData->pos[2];
+                            tcINS.setPos(pos);
+                            _tcNavState = TCNAVRunState::init;
+                            debugTimestamp = 0;
+                            break;
+                            // imuDataMtx.unlock();
+                        } else {
+                            imuDataQueue.pop();
+                            imuDataMtx.unlock();
+                        }
+                    } 
+                    imuDataMtx.unlock();
+                }
+            } else {
+                gnssDataMtx.unlock();
+            }
+            break;
         case TCNAVRunState::init:
         // waiting for the first valid measurement 
         // clear imu cache
@@ -228,15 +302,15 @@ void TCNAV::navRunning()
 #else
                     ekf.init();
 #endif
-                    _gnssWaitTime = 30;
+                    _gnssWaitTime = 1000;
                     _tcNavState = TCNAVRunState::timeUpdate;
                     timePureInertiaWatchDog = std::time(nullptr) + _pureInertiaWaitTime;
                 } else {
-                    imuDataMtx.lock();
-                    while (!imuDataQueue.empty()) {
-                        imuDataQueue.pop();
-                    }
-                    imuDataMtx.unlock(); 
+                    // imuDataMtx.lock();
+                    // while (!imuDataQueue.empty()) {
+                    //     imuDataQueue.pop();
+                    // }
+                    // imuDataMtx.unlock(); 
                 }
             } else {
                 gnssDataMtx.unlock();
@@ -251,6 +325,7 @@ void TCNAV::navRunning()
                         imuDataQueue.pop();
                     }
                     imuDataMtx.unlock(); 
+                    _tcNavState = TCNAVRunState::dropDrity;
                     errLogFile << std::time(nullptr) << ':' << "wait GNSS time out in Initial State" << std::endl;
                 }
             }
@@ -264,8 +339,8 @@ void TCNAV::navRunning()
                     if (pxImuData != nullptr) {
                         if (isNeedLogRawData) {
                             rawIMUlogFile << std::scientific<< std::setprecision(12);
-                            rawIMUlogFile << debugTimestamp << ' ' << pxImuData->gyro[0] << ' ' << pxImuData->gyro[1] << ' ' << pxImuData->gyro[2] << ' '
-                                          << pxImuData->acc[0] << ' ' << pxImuData->acc[1] << ' ' << pxImuData->acc[2] << ' '<< std::time(nullptr) << std::endl;
+                            rawIMUlogFile << pxImuData->imuTime  << ' ' << pxImuData->gyro[0] << ' ' << pxImuData->gyro[1] << ' ' << pxImuData->gyro[2] << ' '
+                                          << pxImuData->acc[0] << ' ' << pxImuData->acc[1] << ' ' << pxImuData->acc[2] << ' ' << debugTimestamp << ' '  << std::endl;
                         }
                         if (isNeedRawDataEcho) {
                             std::cout << std::time(nullptr) << ' ' << pxImuData->gyro[0] << ' ' << pxImuData->gyro[1] << ' ' << pxImuData->gyro[2] << ' '
@@ -285,7 +360,15 @@ void TCNAV::navRunning()
                 if (_imuDataCount == IMU_SAMPLE_FREQ) {
                     _imuDataCount = 0;
                     timePureInertiaWatchDog = std::time(nullptr) + _pureInertiaWaitTime;
+#ifdef USINGNOVELMETHOD
+                    BIVBekf.seqBIVBEKFTCNHC();
+#else
+                    ekf.seqEKFTCNHC();
+#endif
                     _tcNavState = TCNAVRunState::measurementUpdate;
+#ifdef EVALUATETIME
+                    startEvaTime = std::chrono::steady_clock::now();
+#endif
                     debugTimestamp++;
                     startGPSWaitTime = std::chrono::steady_clock::now();
                 }
@@ -307,15 +390,15 @@ void TCNAV::navRunning()
 #else
                         ekf.seqMeasurementUpdate(pxGnssData->psr + pxGnssData->satClk + pxGnssData->lonoDly + pxGnssData->tropDly, pxGnssData->satECEF);
 #endif
-                        // ekf.seqMeasurementUpdate(pxGnssData->psr + pxGnssData->satClk + pxGnssData->lonoDly + pxGnssData->tropDly, pxGnssData->satECEF);
+                        utcTime = pxGnssData->utcTime;
                         if (isNeedLogRawData) {
                             rawGNSSlogFile  << std::scientific<< std::setprecision(14);
-                            rawGNSSlogFile << std::time(nullptr) <<' ' <<(pxGnssData->prn) <<' ' <<(uint32_t)(pxGnssData->type) <<' ' 
+                            rawGNSSlogFile << pxGnssData->gnssTime <<' ' <<(pxGnssData->prn) <<' ' <<(uint32_t)(pxGnssData->type) <<' ' 
                                           <<(uint32_t)(pxGnssData->freqType) <<  ' ' << pxGnssData->psr <<  ' ' << pxGnssData->psrstd<<  ' ' 
                                           << (uint32_t)pxGnssData->CN0 << ' ' << pxGnssData->psrRate << ' '
                                           << pxGnssData->satECEF[0] << ' ' << pxGnssData->satECEF[1] << ' ' << pxGnssData->satECEF[2] << ' '
                                           << pxGnssData->satClk << ' ' << pxGnssData->lonoDly << ' ' << pxGnssData->tropDly <<' '
-                                          << pxGnssData->pos[0] << ' '<< pxGnssData->pos[1] << ' '<< pxGnssData->pos[2]  << std::endl;
+                                          << pxGnssData->pos[0] << ' '<< pxGnssData->pos[1] << ' '<< pxGnssData->pos[2] << ' ' << debugTimestamp << ' ' << utcTime << ' '<< std::endl;
                         }
                         if (isNeedRawDataEcho) {
                             std::cout  << std::time(nullptr) <<' ' <<(int)(pxGnssData->prn) <<  ' '  << pxGnssData->psr << ' ' << pxGnssData->psrRate << ' '
@@ -332,6 +415,13 @@ void TCNAV::navRunning()
                         }
 #ifdef USINGNOVELMETHOD
                         BIVBekf.seqBIVBUpdateLUT();
+#endif
+#ifdef EVALUATETIME
+                        endEvaTime = std::chrono::steady_clock::now();
+                        std::chrono::duration<double> duration = 
+                            std::chrono::duration_cast<std::chrono::duration<double>>(endEvaTime - startEvaTime);
+                        elipseTimeLog << "Elapsed time: " << duration.count() << " seconds"<< std::endl;
+                        // elipseTimeLog << "Elapsed time: "  << " seconds" << std::endl;
 #endif
                         _tcNavState = TCNAVRunState::navEchoAndLog;
                         break;
@@ -360,7 +450,7 @@ void TCNAV::navRunning()
                           << insState.biasG[0] << ' ' << insState.biasG[1] << ' ' << insState.biasG[2] << ' '
                           << insState.biasA[0] << ' ' << insState.biasA[1] << ' ' << insState.biasA[2] << ' '
                           << insState.lever[0] << ' ' << insState.lever[1] << ' ' << insState.lever[2] << ' '
-                          << insState.dt << ' ' << insState.ccorr << ' ' << insState.cdrift << std::endl;
+                          << insState.dt << ' ' << insState.ccorr << ' ' << insState.cdrift << ' ' <<utcTime<< ' '<< std::endl;
             }
             if (isNeedInsLog) {
                 insOutLogFile << std::scientific << std::setprecision(12);
@@ -371,7 +461,7 @@ void TCNAV::navRunning()
                               << insState.biasG[0] << ' ' << insState.biasG[1] << ' ' << insState.biasG[2] << ' '
                               << insState.biasA[0] << ' ' << insState.biasA[1] << ' ' << insState.biasA[2] << ' '
                               << insState.lever[0] << ' ' << insState.lever[1] << ' ' << insState.lever[2] << ' '
-                              << insState.dt << ' ' << insState.ccorr << ' ' << insState.cdrift << std::endl;
+                              << insState.dt << ' ' << insState.ccorr << ' ' << insState.cdrift << ' ' <<utcTime << ' ' <<std::endl;
             }
             _tcNavState = TCNAVRunState::timeUpdate;
             break;
@@ -415,6 +505,7 @@ void TCNAV::readRawDataFromFile(const std::string& imuFilePath, const std::strin
                 pxIMUData->acc[1] = tmpVal;
                 imuFile >>tmpVal;
                 pxIMUData->acc[2] = tmpVal;
+                imuFile >>tmpVal;
                 // imuPub.publish(pxIMUData);
                 imuDataMtx.lock();
                 // std::cout << pxIMUData->gyro[0] << ' ' << pxIMUData->gyro[1] << ' ' << pxIMUData->gyro[2] << ' '

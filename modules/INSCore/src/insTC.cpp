@@ -85,6 +85,7 @@ bool TCINS::insConfig(const std::string& configFilePath)
     double clockcorrection0 = stod(config["clockcorrection0"]);
     double clockdrift0 = stod(config["clockdrift0"]);
     double imufs = stod(config["imufs"]);
+    rNHC = stod(config["NHCR"]);
     initialBiasG = stod(config["initialBiasG"]);
     initialBiasA = stod(config["initialBiasA"]);
     clock_phase_PSD = stod(config["clock_phase_PSD"]); 
@@ -93,6 +94,7 @@ bool TCINS::insConfig(const std::string& configFilePath)
     range_rate_SD = stod(config["range_rate_SD"]); 
     deviationOfGyroV = stod(config["devGyroV"]); 
     deviationOfAccV = stod(config["devAccV"]); 
+    deviationOfAccU = stod(config["devAccU"]); 
     rx_clock_offset = stod(config["rx_clock_offset"]);
     rx_clock_drift = stod(config["rx_clock_drift"]);
     outputPath = config["outputpath"];
@@ -186,6 +188,12 @@ bool TCINS::insUpdate(Vector3d& deltaGyro, Vector3d& deltaAcc)
     return true;
 }
 
+bool TCINS::setPos(Vector3d &gnssPos)
+{
+    pos = gnssPos;
+    return true;
+}
+
 bool TCINS::xyz2blh(Vector3d& xyz, Vector3d& blh)
 {
     return true;
@@ -205,10 +213,12 @@ bool TCINS::seqEKF::init()
 {
     double varOfGyroV = ins.deviationOfGyroV * ins.deviationOfGyroV;
     double varOfAccV = ins.deviationOfAccV * ins.deviationOfAccV;
+    double varOfAccU = ins.deviationOfAccU * ins.deviationOfAccU;
     double varclock_freq_PSD = ins.clock_freq_PSD * ins.clock_freq_PSD;
     double varclock_phase_PSD = ins.clock_phase_PSD * ins.clock_phase_PSD;
     Q(0,0) = varOfGyroV; Q(1,1) = varOfGyroV; Q(2,2) = varOfGyroV; 
     Q(3,3) = varOfAccV; Q(4,4) = varOfAccV; Q(5,5) = varOfAccV;
+    Q(12,12) = varOfAccU; Q(13,13) = varOfAccU; Q(14,14) = varOfAccU;
     Q(19,19) = varclock_phase_PSD; Q(20,20)= varclock_freq_PSD;
     P(0,0) = ((10.0/3.0)*navGlv::deg2rad)*((10.0/3.0)*navGlv::deg2rad);
     P(1,1) = P(0,0); P(2,2) = P(0,0);
@@ -230,6 +240,9 @@ bool TCINS::seqEKF::init()
     R = ins.pseudo_range_SD * ins.pseudo_range_SD;
     R2(0,0) = ins.pseudo_range_SD * ins.pseudo_range_SD;
     R2(1,1) = ins.range_rate_SD * ins.range_rate_SD;
+    NHCR.setZero();
+    NHCR(0,0) = ins.rNHC * ins.rNHC;
+    NHCR(1,1) = NHCR(0,0);
     return true;
 }
 
@@ -342,6 +355,52 @@ bool TCINS::seqEKF::JacobianHt(Vector3d &starPos)
     return true;
 }
 
+bool TCINS::seqEKF::seqEKFTCNHC() 
+{
+    tmpNHC_M = ins.Cnb.transpose();
+    HtNHC.block<1,3>(0,3) = tmpNHC_M.block<1,3>(0,0);
+    HtNHC.block<1,3>(1,3) = tmpNHC_M.block<1,3>(2,0);
+    tmpNHC_M = -tmpNHC_M * vector2skew(ins.vn);
+    HtNHC.block<1,3>(0,0) = tmpNHC_M.block<1,3>(0,0);
+    HtNHC.block<1,3>(1,0) = tmpNHC_M.block<1,3>(2,0);
+    
+    // measurement update
+    innov_covNHC = HtNHC * P * HtNHC.transpose() + NHCR;
+    cross_corr_covNHC = P * HtNHC.transpose();
+    KGainNHC = cross_corr_covNHC * innov_covNHC.inverse();
+    tmpNHC_V = ins.Cnb.transpose()* ins.vn;
+    Eigen::Vector2d tmpObs(tmpNHC_V(0),tmpNHC_V(2)); 
+    X = KGainNHC * tmpObs;
+    P = P - KGainNHC * innov_covNHC * KGainNHC.transpose();
+    // feedback
+    double angle = fRotAxis.norm();
+    fRotAxis.normalize();
+    Eigen::AngleAxisd phi(angle, fRotAxis);
+    ins.qnb = Eigen::Quaterniond(phi) * ins.qnb;
+    ins.vn = ins.vn - fVn;
+    ins.pos = ins.pos - fPos;
+    ins.biasGyro = ins.biasGyro + fBiasGyro;
+    ins.biasAcc = ins.biasAcc + fBiasAcc;
+    ins.lever = ins.lever + fLever;
+    ins.dt = ins.dt + fDt;
+    ins.ccorr = ins.ccorr + fCcorr;
+    ins.cdrift = ins.cdrift + fCdrift;
+    X.setZero();
+    // sync atti
+    ins.Cnb = ins.qnb.toRotationMatrix(); 
+    ins.atti << std::asin(ins.Cnb(2,1)), 
+                std::atan2(-ins.Cnb(2,0),ins.Cnb(2,2)),
+                std::atan2(-ins.Cnb(0,1),ins.Cnb(1,1));
+    if (ins.Cnb(2,1) > 0.999999) {
+        ins.atti(1) = 0;
+        ins.atti(1) = std::atan2(ins.Cnb(0,2),ins.Cnb(0,0));
+    } else if(ins.Cnb(2,1) < -0.999999) {
+        ins.atti(1) = 0;
+        ins.atti(1) = -std::atan2(ins.Cnb(0,2),ins.Cnb(0,0));
+    }
+    return true;
+}
+
 bool TCINS::seqEKF::seqMeasurementUpdate(double pseRange, Vector3d &starPos)
 {
     if (!isFirstMeasured) {
@@ -422,6 +481,7 @@ TCINS::seqEKF::seqEKF(TCINS& tcins): X(Eigen::Matrix<double, 21, 1>::Zero()),ins
     Mvp.setZero(); 
     Mpp.setZero();
     Cen.setZero();
+    HtNHC.setZero();
     parXYZBLH.setZero();
     P.setZero(); 
     Q.setZero(); 
@@ -454,7 +514,7 @@ bool TCINS::seqBIVBEKF::init()
     P(1,1) = P(0,0); P(2,2) = P(0,0);
     P(3,3) = (0.15/3)*(0.15/3);
     P(4,4) = P(3,3); P(5,5) = P(3,3);
-    P(6,6) = 1e-6*1e-6; P(7,7) = P(6,6); P(8,8) = (20.0/3.0) * (20.0/3.0);
+    P(6,6) = 1e-6*1e-6; P(7,7) = P(6,6); P(8,8) = (10.0/3.0) * (10.0/3.0);
     P(9,9) = ins.initialBiasG * navGlv::dph * ins.initialBiasG * navGlv::dph;
     P(10,10) = P(9,9);
     P(11,11) = P(9,9);
@@ -470,6 +530,9 @@ bool TCINS::seqBIVBEKF::init()
     R = ins.pseudo_range_SD * ins.pseudo_range_SD;
     R2(0,0) = ins.pseudo_range_SD * ins.pseudo_range_SD;
     R2(1,1) = ins.range_rate_SD * ins.range_rate_SD;
+    NHCR.setZero();
+    NHCR(0,0) = ins.rNHC * ins.rNHC;
+    NHCR(1,1) = NHCR(0,0);
     return true;
 }
 
@@ -563,7 +626,7 @@ bool TCINS::seqBIVBEKF::JacobianHtOnlyRange(Vector3d &starPos)
 {
     Ht.block<1,3>(0,6) = u_as_e.transpose() * parXYZBLH; // pos
     Ht.block<1,3>(0,15) = u_as_e.transpose() * ins.MpvCnb; // lever
-    Ht(0,18) = -u_as_e.transpose() * ins.Mpvvn; // delta T
+    Ht(0,18) = u_as_e.transpose() * ins.Mpvvn; // delta T
     Ht(0,19) = 1; // ccorr
     return true;
 }
@@ -586,6 +649,51 @@ bool TCINS::seqBIVBEKF::seqBIVBUpdateLUT()
              vmInfo.second.isValid = VBMINFOSTATE::init;
         }
     }
+}
+
+bool TCINS::seqBIVBEKF::seqBIVBEKFTCNHC() 
+{
+    tmpNHC = ins.Cnb.transpose();
+    HtNHC.block<1,3>(0,3) = tmpNHC.block<1,3>(0,0);
+    HtNHC.block<1,3>(1,3) = tmpNHC.block<1,3>(2,0);
+    tmpNHC = -tmpNHC * vector2skew(ins.vn);
+    HtNHC.block<1,3>(0,0) = tmpNHC.block<1,3>(0,0);
+    HtNHC.block<1,3>(1,0) = tmpNHC.block<1,3>(2,0);
+    // measurement update
+    innov_covNHC = HtNHC * P * HtNHC.transpose() + NHCR;
+    cross_corr_covNHC = P * HtNHC.transpose();
+    KGainNHC = cross_corr_covNHC * innov_covNHC.inverse();
+    tmpNHC_V = ins.Cnb.transpose()* ins.vn;
+    Eigen::Vector2d tmpObs(tmpNHC_V(0),tmpNHC_V(2)); 
+    X = KGainNHC * tmpObs;
+    P = P - KGainNHC * innov_covNHC * KGainNHC.transpose();
+    // feedback
+    double angle = fRotAxis.norm();
+    fRotAxis.normalize();
+    Eigen::AngleAxisd phi(angle, fRotAxis);
+    ins.qnb = Eigen::Quaterniond(phi) * ins.qnb;
+    ins.vn = ins.vn - fVn;
+    ins.pos = ins.pos - fPos;
+    ins.biasGyro = ins.biasGyro + fBiasGyro;
+    ins.biasAcc = ins.biasAcc + fBiasAcc;
+    ins.lever = ins.lever + fLever;
+    ins.dt = ins.dt + fDt;
+    ins.ccorr = ins.ccorr + fCcorr;
+    ins.cdrift = ins.cdrift + fCdrift;
+    X.setZero();
+    // sync atti
+    ins.Cnb = ins.qnb.toRotationMatrix(); 
+    ins.atti << std::asin(ins.Cnb(2,1)), 
+                std::atan2(-ins.Cnb(2,0),ins.Cnb(2,2)),
+                std::atan2(-ins.Cnb(0,1),ins.Cnb(1,1));
+    if (ins.Cnb(2,1) > 0.999999) {
+        ins.atti(1) = 0;
+        ins.atti(1) = std::atan2(ins.Cnb(0,2),ins.Cnb(0,0));
+    } else if(ins.Cnb(2,1) < -0.999999) {
+        ins.atti(1) = 0;
+        ins.atti(1) = -std::atan2(ins.Cnb(0,2),ins.Cnb(0,0));
+    }
+    return true;
 }
 
 bool TCINS::seqBIVBEKF::seqBIVBMeasurementUpdate(uint16_t prn, double pseRange, Vector3d &starPos)
@@ -659,8 +767,8 @@ bool TCINS::seqBIVBEKF::seqBIVBMeasurementUpdate(uint16_t prn, double pseRange, 
             X = KGain * (pseRange - obs_meas);
             P = tmpP - KGain * innov_cov * KGain.transpose();
             // estimate yt(Xi)
-            // dr_ea_e = Cen * (ins.MpvCnb * fLever - fPos - ins.Mpvvn * fDt);
-            dr_ea_e = Cen * (  fPos );
+            dr_ea_e = Cen * (fPos + ins.Mpvvn * fDt - ins.MpvCnb * fLever);
+            // dr_ea_e = Cen * (  fPos );  // will reduce time consumption about 0.01s
             delta_r = starPos - r_ea_e - dr_ea_e;
             approx_range = delta_r.norm();
             ins.Cei = Eigen::Matrix3d::Identity() - (Omega_ie * approx_range / navGlv::lightspeed);

@@ -43,7 +43,7 @@ bool SerialPort::configurePort(int baudRate, int dataBits, int stopBits, char pa
         std::cerr << "Error from tcgetattr: " << strerror(errno) << std::endl;
         return false;
     }
-
+    memset(&_tty, 0, sizeof(_tty));
     // 设置波特率
     speed_t speed;
     switch (baudRate) {
@@ -105,11 +105,13 @@ bool SerialPort::configurePort(int baudRate, int dataBits, int stopBits, char pa
     }
 
     // 其他配置
-    _tty.c_cflag |= CREAD | CLOCAL;  // 使能读取
+    _tty.c_cflag |= (CREAD | CLOCAL);  // 使能读取
     _tty.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);  // 关闭回显、信号处理
-    _tty.c_iflag &= ~(IXON | IXOFF | IXANY);          // 禁用软件流控制
+    // _tty.c_iflag &= ~(IXON | IXOFF | IXANY);          // 禁用软件流控制
     _tty.c_oflag &= ~OPOST;                           // 禁用输出处理
 
+    tcflush(_fd, TCIFLUSH);
+    
     // 应用设置
     if (tcsetattr(_fd, TCSANOW, &_tty) != 0) {
         std::cerr << "Error from tcsetattr: " << strerror(errno) << std::endl;

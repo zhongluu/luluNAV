@@ -2,6 +2,7 @@
 #define _TIGHTCOUPLE_
 #include "Subscriber.hpp"
 #include "BASEElement.h"
+#include "main.hpp"
 #include "sensorsMsg.hpp"
 #include <mutex>
 #include "insTC.h"
@@ -12,6 +13,8 @@ class TCNAV : public Subscriber
 private:
 
     enum class TCNAVRunState {
+        dropDrity,
+        sync,
 		init,
 		timeUpdate,
 		measurementUpdate,
@@ -32,14 +35,15 @@ private:
     bool isNeedInsEcho; // default false
     bool isNeedRawDataEcho; // default false
     bool isReadFromLog;
-    TCNAVRunState _tcNavState = TCNAVRunState::init;
+    TCNAVRunState _tcNavState = TCNAVRunState::dropDrity;
     uint32_t _imuDataCount{0};
     uint32_t _pureInertiaWaitTime{1200}; //default - 1200 (s)
-    int64_t _gnssWaitTime{500};  //default - 30 (ms) in measurement update state
+    int64_t _gnssWaitTime{1000};  //default - 30 (ms) in measurement update state
     std::ofstream insOutLogFile;
     std::ofstream errLogFile;
     std::ofstream rawIMUlogFile;
     std::ofstream rawGNSSlogFile;
+    std::ofstream elipseTimeLog;
     std::mutex imuDataMtx;
     std::queue<std::shared_ptr<SENSORMSG_IMUDATA>> imuDataQueue;
     std::mutex gnssDataMtx;

@@ -24,8 +24,8 @@ public:
     Vector3d  atti, vn, pos, biasGyro, biasAcc, lever; // atti - yaw pitch roll
     Vector3d estVn, estPos;
     Quaterniond qnb;
-    double initialBiasG, initialBiasA;
-    double ts, deviationOfGyroV, deviationOfAccV, dt;
+    double initialBiasG, initialBiasA, rNHC;
+    double ts, deviationOfGyroV, deviationOfAccV, deviationOfAccU, dt;
     Vector3d  wib, wnb, fb, fn, an, web;
 
     Vector3d  deltaGyroPre, deltaAccPre, phim, dvbm, Mpvvn;

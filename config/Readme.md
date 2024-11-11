@@ -23,12 +23,14 @@ clockcorrection0=10000 for initial state (m)
 clockdrift0=0 for initial state (m/s)
 imufs=250 IMU sample frequency (Hz)
 devGyroV=4.3633e-05 for Q matrix (rad/sqrt(Hz))
-devAccV=0.0012 for Q matrix m/s^2/sqrt(Hz)
+devAccV=0.01333 for velocity randow walk Q matrix m/s^2/sqrt(Hz) 0.8m/s/sqrt(h) - stim300 80g
+devAccU=0.004 for bias instability Q matrix m/s^2 0.4mg - stim300 80g can not be ignored! 
 clock_phase_PSD=1.0 for Q matrix Code tracking error SD (m) 
 clock_freq_PSD=0.2 for Q matrix  Range rate tracking error SD (m/s) 
 rx_clock_offset=10000 for P matrix Receiver clock offset at time=0 (m)
 rx_clock_drift=100 for P matrix  Receiver clock drift at time=0 (m/s)
-pseudo_range_SD=0.1 Pseudo-range measurement noise SD (m)
-range_rate_SD=0.01 Pseudo-range rate measurement noise SD (m/s)
+pseudo_range_SD=0.1 for R matrix Pseudo-range measurement noise SD (m)
+range_rate_SD=0.01 for R matrix Pseudo-range rate measurement noise SD (m/s)
 initialBiasG=250 for P matrix (deg / h)
 initialBiasA=0.0073 for P matrix (m / s^2)
+NHCR=0.5 for car vehicle NHC R

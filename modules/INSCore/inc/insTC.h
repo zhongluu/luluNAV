@@ -62,6 +62,7 @@ public:
     bool insOutput();
     bool insLogFile();
     bool xyz2blh(Vector3d& xyz, Vector3d& blh);
+    bool setPos(Vector3d &gnssPos);
     bool getECEFFromSats(double& psr, Vector3d& deltaGyro, Vector3d&xECEF);
     TCINSSTATE getInsState() const;
     bool isFirstIMUData, isFileOpen;
@@ -70,11 +71,17 @@ public:
     public:
         Matrix<double, 21, 1> X, KGain, cross_corr_cov;
         Matrix<double, 21, 21> P, Q; 
+        Matrix<double, 21, 2> KGainNHC, cross_corr_covNHC;
+        Matrix<double, 2, 2> innov_covNHC;
+        Matrix<double, 3, 3> tmpNHC_M; 
+        Matrix<double, 2, 2> NHCR;
+        Vector3d tmpNHC_V;
         double R; 
         Matrix<double, 2, 2> R2;
         Matrix<double, 21, 21>  Ft; 
         Matrix<double, 1, 21>  Ht; 
         Matrix<double, 2, 21>  Ht2; 
+        Matrix<double, 2, 21>  HtNHC;
         decltype(X.segment<3>(0)) fRotAxis, fVn, fPos, fBiasGyro, fBiasAcc, fLever;
         // Matrix<double, 3, 1> fRotAxis, fVn, fPos, fBiasGyro, fBiasAcc, fLever;
         double &fDt, &fCcorr, &fCdrift;
@@ -95,6 +102,7 @@ public:
         bool init();
         bool timeUpdate();
         bool seqMeasurementUpdate(double pseRange, Vector3d &starPos);
+        bool seqEKFTCNHC();
         bool measurementUpdate(double pseRange, double pseRangeRate);
     };
     class seqBIVBEKF
@@ -103,9 +111,14 @@ public:
         
         Matrix<double, 21, 1> X, KGain, cross_corr_cov;
         Matrix<double, 21, 21> P, Q; 
+        Matrix<double, 21, 2> KGainNHC, cross_corr_covNHC;
+        Matrix<double, 2, 2> innov_covNHC;
+        Matrix<double, 3, 3> tmpNHC; 
+        Matrix<double, 2, 2> NHCR;
+        Vector3d tmpNHC_V;
         double R; 
         double VBpho_d;
-        double VBerr_TH{1e-10};
+        double VBerr_TH{1e-5};
         const double VBZtTH = 0.1;
         const double VBe0 = 0.9;
         const double VBf0 = 0.1;
@@ -118,6 +131,7 @@ public:
         Matrix<double, 21, 21>  Ft; 
         Matrix<double, 1, 21>  Ht; 
         Matrix<double, 2, 21>  Ht2; 
+        Matrix<double, 2, 21>  HtNHC;
         decltype(X.segment<3>(0)) fRotAxis, fVn, fPos, fBiasGyro, fBiasAcc, fLever;
         double &fDt, &fCcorr, &fCdrift;
         Matrix3d &Mpv;
@@ -137,6 +151,7 @@ public:
         bool timeUpdate();
         const std::unordered_map<uint16_t, TCBIVBMINFO>& getVBMInfo() const;
         bool seqBIVBMeasurementUpdate(uint16_t prn, double pseRange, Vector3d &starPos);
+        bool seqBIVBEKFTCNHC();
         bool seqBIVBUpdateLUT();
     };
 };

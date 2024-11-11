@@ -9,6 +9,7 @@ using Eigen::Vector3d;
 
 typedef struct tagSENSORMSG_IMUDATA
 {
+    long imuTime;
     Vector3d gyro; // x y z
     Vector3d acc; // x y z
 }SENSORMSG_IMUDATA;
@@ -25,6 +26,8 @@ typedef struct tagSENSORMSG_SATDATA
 
 typedef struct tagSENSORMSG_GNSSDATA
 {
+    long gnssTime;
+    double utcTime;
     uint16_t prn = 0;
     uint16_t psrstd = 0;
     uint16_t CN0 = 0;

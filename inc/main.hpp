@@ -15,23 +15,27 @@
 #define TCINSLOGFILE "../data/tightcouple/tcINSLog.txt"
 #define TCINSERRLOGFILE "../data/tightcouple/error.txt"
 
-// #define IMUSIMDATAFILE "../data/SIM/imuData.txt"
-// #define GNSSSIMDATAFILE "../data/SIM/gnssData.txt"
-// #define TCINSSIMLOGFILE "../data/SIM/tcINSSIMLog.txt"
-
-#define IMUSIMDATAFILE "../data/tightcouple/imuRAW_2217.txt"
-#define GNSSSIMDATAFILE "../data/tightcouple/gnssRAW_2217.txt"
-#define TCINSSIMLOGFILE "../data/SIM/tcVBINSSIMLog_2217.txt"
-
 // #define USINGNOVELMETHOD
 
-//#define READFROMFILE
+#define IMUSIMDATAFILE "../data/tightcouple/imuRAW_1807_I.txt"
+#define GNSSSIMDATAFILE "../data/tightcouple/gnssRAW_1807_I.txt"
+
+#ifdef USINGNOVELMETHOD
+#define TCINSSIMLOGFILE "../data/SIM/tcVBINSSIMLog_1807_I.txt"
+#else
+#define TCINSSIMLOGFILE "../data/SIM/tcINSSIMLog_1807_I.txt"
+#endif
+
+// #define EVALUATETIME
+
+
+
+// #define READFROMFILE
 
 #ifndef READFROMFILE
 #define GLV_IMU_SAMPLES 125
 #else
-// #define GLV_IMU_SAMPLES 100
-#define GLV_IMU_SAMPLES 250
+#define GLV_IMU_SAMPLES 125
 #endif
 
 #endif

@@ -97,20 +97,21 @@ void SENSORS::listenIMU()
         
         if (imuSTIM300.listen(data) > 0) {
             std::shared_ptr<SENSORMSG_IMUDATA> pxIMUData = std::make_shared<SENSORMSG_IMUDATA>();
+            pxIMUData->imuTime = static_cast<long>(std::time(nullptr));
             pxIMUData->gyro[0] = data.gx * navGlv::deg2rad / SENSORS_IMU_SAMPLE_FREQ;
             pxIMUData->gyro[1] = data.gy * navGlv::deg2rad / SENSORS_IMU_SAMPLE_FREQ;
             pxIMUData->gyro[2] = data.gz * navGlv::deg2rad / SENSORS_IMU_SAMPLE_FREQ;
             pxIMUData->acc[0] = data.ax * navGlv::g / SENSORS_IMU_SAMPLE_FREQ;
             pxIMUData->acc[1] = data.ay * navGlv::g / SENSORS_IMU_SAMPLE_FREQ;
             pxIMUData->acc[2] = data.az * navGlv::g / SENSORS_IMU_SAMPLE_FREQ;
-            // imuPub.publish(pxIMUData);
+            imuPub.publish(pxIMUData);
             if (isNeedSensorsLog) {
                 imuLogFile << std::scientific<< std::setprecision(14);
                 imuLogFile << uiSync << ' '  << pxIMUData->gyro[0] << ' ' << pxIMUData->gyro[1] << ' ' << pxIMUData->gyro[2] << ' '
-                                      << pxIMUData->acc[0] << ' ' << pxIMUData->acc[1] << ' ' << pxIMUData->acc[2] << std::endl;
+                                      << pxIMUData->acc[0] << ' ' << pxIMUData->acc[1] << ' ' << pxIMUData->acc[2] << ' ' << pxIMUData->imuTime << std::endl;
             }
         } else {
-            errLogFile << std::time(nullptr)  << " IMU parse error" << std::endl;
+            // errLogFile << std::time(nullptr)  << " IMU parse error" << std::endl;
             // std::cout << std::time(nullptr)  << " IMU parse error" << std::endl;
         }
     }
@@ -279,6 +280,8 @@ void SENSORS::listenGNSSTC()
                             }
                             freq = freq * 1000000;
                             std::shared_ptr<SENSORMSG_GNSSDATA> pxGNSSData = std::make_shared<SENSORMSG_GNSSDATA>();
+                            pxGNSSData->gnssTime = static_cast<long>(std::time(nullptr));
+                            pxGNSSData->utcTime = pxNMEAGGAData->utc_time;
                             pxGNSSData->prn = pxOBSVMData->obsSVInfo[i].prn;
                             pxGNSSData->psr = pxOBSVMData->obsSVInfo[i].psr;
                             pxGNSSData->psrstd = pxOBSVMData->obsSVInfo[i].psr_std;
@@ -300,9 +303,9 @@ void SENSORS::listenGNSSTC()
                                       << (uint32_t)pxGNSSData->CN0 << ' ' << pxGNSSData->psrRate << ' '
                                       << pxGNSSData->satECEF[0] << ' ' << pxGNSSData->satECEF[1] << ' ' << pxGNSSData->satECEF[2] << ' '
                                       << pxGNSSData->satClk << ' ' << pxGNSSData->lonoDly << ' ' << pxGNSSData->tropDly<< ' '
-                                      << pxGNSSData->pos[0] << ' '<< pxGNSSData->pos[1] << ' '<< pxGNSSData->pos[2]  << std::endl;
+                                      << pxGNSSData->pos[0] << ' '<< pxGNSSData->pos[1] << ' '<< pxGNSSData->pos[2] << ' ' << pxGNSSData->gnssTime << std::endl;
                             }
-                            // gnssPub.publish(pxGNSSData);
+                            gnssPub.publish(pxGNSSData);
                         }
                     }
                     
@@ -311,7 +314,7 @@ void SENSORS::listenGNSSTC()
                     gnssLogFile1 << std::endl;
                 }
                 std::shared_ptr<SENSORMSG_GNSSDATA> pxGNSSData = nullptr;
-                // gnssPub.publish(pxGNSSData); // denote this frame end
+                gnssPub.publish(pxGNSSData); // denote this frame end
 
                 // invalid SATLUT
                 for (size_t i = 0; i < pxSATECEFData->satNum; i++) {

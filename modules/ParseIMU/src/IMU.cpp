@@ -5,6 +5,7 @@ IMU::IMU(const std::string& imuSerialPath, int baudRate) : imuPort(imuSerialPath
         _revWaitTime(300), _buf(IMU_RECV_BUFFER_SIZE), isOldVal(false), isPortOpen(false)
 {
     if(imuPort.openPort()) {
+        imuPort.setReadTimeout(1,0);
         isPortOpen = true;
     }
 }
@@ -69,6 +70,8 @@ bool IMU::parseSTIM300()
         } else {
             _buf.popOut();
             _decode_state = IMUDecodeState::uninit;
+            std::cout << "CRC error" <<std::endl;
+            return false;
         }
         break;
     }
@@ -260,6 +263,8 @@ int IMU::listen(IMUData& imuData)
                     return false;
                 }
                
+            }else{
+                return false;
             }
             
         }

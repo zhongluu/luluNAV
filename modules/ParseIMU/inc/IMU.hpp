@@ -10,10 +10,12 @@
 #include <cstdint>
 #include "RingBuffer.hpp"
 
-#define IMU_RECV_BUFFER_SIZE 512
+
 
 #define STIM300_READ_BUFFER_SIZE 42
 #define STIM300_FRAME_HEAD 0xA5
+
+#define IMU_RECV_BUFFER_SIZE (STIM300_READ_BUFFER_SIZE * 20)
 
 typedef struct tagIMUData
 {
