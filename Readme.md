@@ -27,7 +27,7 @@ entering the password \
 5. change the serial port macro "*IMUUARTPORT*" for IMU and "*GNSSUARTPORT*" for GNSS in real time running (if necessary).
    
 ## 5 Navigation configuration
-please refer to the readme of the "./config/Readme.md"
+please refer to the readme of the "*./config/Readme.md*"
 
 # Software framework
 
@@ -51,14 +51,34 @@ changing the tight couple navigation inital configuration in '/config/insconfig.
 ## 8 Support range rate measurement for TCINS
 ## 9 Coarse alignment
 
+# File Description
+	|-- ..LULUNAV
+	|-- .config
+	|-- .data
+		|-- AHRS // Reference system data
+		|-- sensors // for debug mine system sensors data
+		|-- SPAN // Novatel SPAN data
+		|-- SIM // running output offline or simulation output
+		|-- tightcouple // tightly coupled navigation data included the raw data from gnss and imu
+	|-- .driver // serial driver code
+	|-- .img // result images
+	|-- .inc // marco define for src in current directory
+	|-- .matlab // the matlab code and data for the novel method 
+	|-- .modules 
+		|-- .Component // the template Ringbuff class code
+		|-- .INSCore // the tightly coupled navigation core code
+		|-- .ParseGNSS // the parse code for um982 GNSS chip
+		|-- .ParseIMU // the parse code for STIM300 IMU
+	|-- .platform // the publisher - subscriber software framework pattern code
+	|-- .src // the main combination code
 # NOTE:
 1. subscriber must be create by make_shared 
-2. A initial attitude must to be config in the "insEXconfig.txt" 
+2. A initial attitude must to be config in the "*./config/insEXconfig.txt*" 
 3. The GNSS only support fixed 1 Hz until now
 4. If you want to running the Matlab code, the psins toolbox must be applied from  https://www.psins.org.cn/
 5. There are slight differences between the result of C++ and the result of Matlab.
 6. A GPL license is used in mine code, commercial using is not allowed without permission
-7. The corresponding work is submitted to "" with ID "".
+7. The corresponding work was submitted to "IEEE " on 13/11/2024, with the ID: ' '.
 
 # Estimation Result:
 ## Novel method estimation result
