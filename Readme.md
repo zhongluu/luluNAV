@@ -1,7 +1,7 @@
 # Preface
 This software is used to implement the tightly coupled navigation with GNSS system. The normal NMEA frame and UM982 gnss chip frame are supported for GNSS sensors. The 0xA5 frame header of STIM300 is supported for IMU sensor. 
 
-The traditional fusion method with Extended Kalman filter and the novel method proposed by myself are realized in "[*./modules/INSCore*](./modules/INSCore)" with C++ and "[*./matlab/tightlyCoupleNavigation*](./matlab/tightlyCoupleNavigation)" with MATLAB. Detailed performance evaluation and algorithm principles can be found in the subfolder of "*./matlab*".
+The traditional fusion method with Extended Kalman filter and the novel method proposed by myself are realized in "[*./modules/INSCore*](./modules/INSCore)" with C++ and "[*./matlab/tightlyCoupleNavigation*](./matlab/tightlyCoupleNavigation)" with MATLAB. Detailed performance evaluation and algorithm principles ("[*./matlab/PrincipleVerifyByROTModel*](./matlab/PrincipleVerifyByROTModel/)") can be found in the subfolder of "[*./matlab*](./matlab)".
 
 # How to Use
 ## 1 Primary configuration
@@ -35,7 +35,7 @@ You also can be running in debug mode by install the Cmake extension within VSco
 5. change the serial port macro "*IMUUARTPORT*" for IMU and "*GNSSUARTPORT*" for GNSS in real time running (if necessary).
    
 ## 5 Navigation configuration
-please refer to the readme of the "*./config/Readme.md*" [ins Configuration](./config/Readme.md)
+please refer to the readme of the "[*./config/Readme.md*](./config/Readme.md)"
 
 # Software framework
 
@@ -91,7 +91,7 @@ changing the tight couple navigation inital configuration in "[*./config/insEXco
 # Estimation Result:
 ## Novel method estimation result
 
-**A comparison between other methods and SPAN (NovAtel) can be see in "*./matlab/Readme.md*"** [matlab](./matlab/Readme.md)
+**A comparison between other methods and SPAN (NovAtel) can be see in "[*./matlab/Readme.md*](./matlab/Readme.md)"** 
 
 Attitude:
 
