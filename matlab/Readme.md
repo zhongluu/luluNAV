@@ -78,12 +78,12 @@ RMSE R:
 ## TightlyCoupleNavigation Result Comparison
 Attitude:
 
-![VBAttitude](./img/AttiComp.jpg "Attitude")
+![VBAttitudeComp](./img/AttiComp.jpg "VBAttitudeComp")
 
 Velocity:
 
-![VBVelocity](./img/VelComp.jpg "Velocity")
+![VBVelocityComp](./img/VelComp.jpg "VBVelocityComp")
 
 Position:
 
-![VBPosition](./img/PosComp.jpg "Position")
+![VBPositionComp](./img/PosComp.jpg "VBPositionComp")
