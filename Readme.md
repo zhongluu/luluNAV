@@ -78,7 +78,7 @@ changing the tight couple navigation inital configuration in '/config/insconfig.
 4. If you want to running the Matlab code, the psins toolbox must be applied from  https://www.psins.org.cn/
 5. There are slight differences between the result of C++ and the result of Matlab.
 6. A GPL license is used in mine code, commercial using is not allowed without permission
-7. The corresponding work was submitted to "IEEE " on 13/11/2024, with the ID: ' '.
+7. The corresponding work was submitted to "*IEEE Internet of Things Journal*" on 13/11/2024.
 
 # Estimation Result:
 ## Novel method estimation result
