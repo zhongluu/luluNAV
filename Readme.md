@@ -1,7 +1,7 @@
 # Preface
 This software is used to implement the tightly coupled navigation with GNSS system. The normal NMEA frame and UM982 gnss chip frame are supported for GNSS sensors. The 0xA5 frame header of STIM300 is supported for IMU sensor. 
 
-The traditional fusion method with Extended Kalman filter and the novel method proposed by myself are realized in "*./modules/INSCore*"" with C++ and "*./matlab/tightlyCoupleNavigation*" with MATLAB. Detailed performance evaluation and algorithm principles can be found in the subfolder of "*./matlab*".
+The traditional fusion method with Extended Kalman filter and the novel method proposed by myself are realized in "[*./modules/INSCore*](./modules/INSCore)" with C++ and "[*./matlab/tightlyCoupleNavigation*](./matlab/tightlyCoupleNavigation)" with MATLAB. Detailed performance evaluation and algorithm principles can be found in the subfolder of "*./matlab*".
 
 # How to Use
 ## 1 Primary configuration
@@ -27,7 +27,7 @@ The traditional fusion method with Extended Kalman filter and the novel method p
 Alternative: \
 You also can be running in debug mode by install the Cmake extension within VScode by https://code.visualstudio.com/
 
-## 4 Code configuration in "*./inc/main.hpp*"
+## 4 Code configuration in "[*./inc/main.hpp*](./inc/main.hpp)"
 1. if you want to use the novel VB - sequential processing code please uncomment the macro "*USINGNOVELMETHOD*".
 2. if you want to evaluate the time consumption please uncomment the macro "*EVALUATETIME*".
 3. if you want to running the code from saved raw data please uncomment the macro "*READFROMFILE*" and specify the file path by revise the macro "*IMUSIMDATAFILE*" and "*GNSSSIMDATAFILE*". Meanwhile, the output path alse need to specify by revise the macro "*TCINSSIMLOGFILE*".
@@ -35,7 +35,7 @@ You also can be running in debug mode by install the Cmake extension within VSco
 5. change the serial port macro "*IMUUARTPORT*" for IMU and "*GNSSUARTPORT*" for GNSS in real time running (if necessary).
    
 ## 5 Navigation configuration
-please refer to the readme of the "*./config/Readme.md*"
+please refer to the readme of the "*./config/Readme.md*" [ins Configuration](./config/Readme.md)
 
 # Software framework
 
@@ -46,7 +46,7 @@ template Ringbuff class to parse class for thread
 ## TCINS for tight couple navigation
 Eigen lib is used in abstract INS class \
 nested ekf class in the TCINS class for the kalman filter \
-changing the tight couple navigation inital configuration in '/config/insconfig.txt' with key-value pair
+changing the tight couple navigation inital configuration in "[*./config/insEXconfig.txt*](./config/insEXconfig.txt) with key-value pair for real time experiment and "[*./config/insSIMconfigB.txt*](./config/insSIMconfigB.txt)" for post disposal.
 
 # TODO LIST:
 ## 1 Factory - product pattern for TCINS
@@ -81,7 +81,7 @@ changing the tight couple navigation inital configuration in '/config/insconfig.
 	|-- .src // the main combination code
 # NOTE:
 1. subscriber must be create by make_shared 
-2. A initial attitude must to be config in the "*./config/insEXconfig.txt*" 
+2. A initial attitude must to be config in the "[*./config/insEXconfig.txt*](./config/insEXconfig.txt)" 
 3. The GNSS only support fixed 1 Hz until now
 4. If you want to running the Matlab code, the psins toolbox must be applied from  https://www.psins.org.cn/
 5. There are slight differences between the result of C++ and the result of Matlab.
@@ -91,7 +91,7 @@ changing the tight couple navigation inital configuration in '/config/insconfig.
 # Estimation Result:
 ## Novel method estimation result
 
-**A comparison between other methods and SPAN (NovAtel) can be see in "*./matlab/Readme.md*"**
+**A comparison between other methods and SPAN (NovAtel) can be see in "*./matlab/Readme.md*"** [matlab](./matlab/Readme.md)
 
 Attitude:
 
