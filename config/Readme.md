@@ -30,7 +30,7 @@ clock_phase_PSD=1.0 for Q matrix Code tracking error SD (m) \
 clock_freq_PSD=0.2 for Q matrix  Range rate tracking error SD (m/s) \
 rx_clock_offset=10000 for P matrix Receiver clock offset at time=0 (m)\
 rx_clock_drift=100 for P matrix  Receiver clock drift at time=0 (m/s)\
-pseudo_range_SD=0.1 for R matrix Pseudo-range measurement noise SD (m)\
+pseudo_range_SD=5.5 for R matrix Pseudo-range measurement noise SD (m)\
 range_rate_SD=0.01 for R matrix Pseudo-range rate measurement noise SD (m/s)\
 initialBiasG=250 for P matrix (deg / h)\
 initialBiasA=0.0073 for P matrix (m / s^2)\

@@ -1,23 +1,31 @@
+# Preface
+This software is used to implement the tightly coupled navigation with GNSS system. The normal NMEA frame and UM982 gnss chip frame are supported for GNSS sensors. The 0xA5 frame header of STIM300 is supported for IMU sensor. 
+
+The traditional fusion method with Extended Kalman filter and the novel method proposed by myself are realized in "*./modules/INSCore*"" with C++ and "*./matlab/tightlyCoupleNavigation*" with MATLAB. Detailed performance evaluation and algorithm principles can be found in the subfolder of "*./matlab*".
+
 # How to Use
 ## 1 Primary configuration
-cd ./src \
-sudo -i \
-entering the password \
-(debian) \
-apt-get install libeigen3-dev \
-apt-get install gsl-bin libgsl-dev 
+	cd ./src 
+	sudo -i 
+	// entering the password 
+	// (debian) 
+	apt-get install libeigen3-dev 
+	apt-get install gsl-bin libgsl-dev 
 
 ## 2 Building
-cd /LULUNAV \
-mkdir build \
-cd ./build \
-cmake .. \
-make
+	cd /LULUNAV 
+	mkdir build 
+	cd ./build 
+	cmake .. 
+	make
 
 ## 3 Running in root user
-sudo -i \
-entering the password \
-./LuNavigation
+	sudo -i 
+	entering the password 
+	./LuNavigation
+
+Alternative: \
+You also can be running in debug mode by install the Cmake extension within VScode by https://code.visualstudio.com/
 
 ## 4 Code configuration in "*./inc/main.hpp*"
 1. if you want to use the novel VB - sequential processing code please uncomment the macro "*USINGNOVELMETHOD*".
@@ -82,6 +90,9 @@ changing the tight couple navigation inital configuration in '/config/insconfig.
 
 # Estimation Result:
 ## Novel method estimation result
+
+**A comparison between other methods and SPAN (NovAtel) can be see in "*./matlab/Readme.md*"**
+
 Attitude:
 
 ![VBAttitude](./img/VBAtti.jpg "Attitude")
