@@ -36,13 +36,13 @@ outlierBegin = 100;
 outlierEnd = 105;
 susoutlierBegin = 120;
 susoutlierEnd = 140;
-MC_times = 500;
+MC_times = 100;
 VB_D_Err_TH = 1e-100;
 VB_it_Max = 100;
 
 Time = zeros(1, fix(stopT/deltaT));
 
-RMSE_EKF_X = zeros(MC_times,5); % prealloc MC result for EKF
+RMSE_CHIEKF_X = zeros(MC_times,5); % prealloc MC result for EKF
 RMSE_VBEKF_X = zeros(MC_times,5); % prealloc MC result for VBEKF
 RMSE_VBEKF_R = zeros(MC_times,4); % prealloc MC result for VBEKF
 RMSE_BIWVBEKF_X = zeros(MC_times,5); % prealloc MC result for BIWVBEKF
@@ -67,8 +67,6 @@ nominal_R = 25^2 .* eye(4);
 abnomal_Lambda = 0.5;
 abnomal_Alpha = 5000;
 sustainMu = 5000;
-% abnomal_R = abnomal_Alpha * nominal_R;
-
 
 X0 = [-0, 5, 0, 5, 0.1]';
 
@@ -107,11 +105,11 @@ for mc = 1:MC_times
     filter_X0 = X0 + chol(filter_P0)*randn(5,1);
 
 %% EKF
-    resEKF_X = zeros(5, fix(stopT/deltaT));
+    resChiEKF_X = zeros(5, fix(stopT/deltaT));
     resSEQEKFCHI = zeros(4, fix(stopT/deltaT));
     resSEQEKFCHIIndex = zeros(4, fix(stopT/deltaT));
-    EKF_Px = filter_P0;
-    EKF_X = filter_X0;
+    ChiEKF_Px = filter_P0;
+    ChiEKF_X = filter_X0;
     EKF_R = nominal_R;
 %     EKF_R = diag(R(:,1));
     SEQEKFCHIth = 4000;
@@ -119,27 +117,27 @@ for mc = 1:MC_times
     k=1;
     for t = 0 : deltaT : stopT-deltaT
         % time update
-        F = JabF(EKF_X, deltaT);
-        EKF_X = Ft(EKF_X, deltaT);
-        EKF_Px = F*EKF_Px*F'+ Q;
+        F = JabF(ChiEKF_X, deltaT);
+        ChiEKF_X = Ft(ChiEKF_X, deltaT);
+        ChiEKF_Px = F*ChiEKF_Px*F'+ Q;
         % measurement update
-        H = JabH(EKF_X, SensorsPoint);
+        H = JabH(ChiEKF_X, SensorsPoint);
         EKF_Hk = H;
         SEQEKFHn = size(EKF_Hk,1);
         for i = 1:SEQEKFHn
-            EKF_Sk = EKF_Hk(i,:)*EKF_Px*EKF_Hk(i,:)'+ EKF_R(i,i);
-            SEQEKFCHI = (Ypse(i,k) - EKF_Hk(i,:)*EKF_X)'/EKF_Sk*(Ypse(i,k) - EKF_Hk(i,:)*EKF_X);
+            EKF_Sk = EKF_Hk(i,:)*ChiEKF_Px*EKF_Hk(i,:)'+ EKF_R(i,i);
+            SEQEKFCHI = (Ypse(i,k) - EKF_Hk(i,:)*ChiEKF_X)'/EKF_Sk*(Ypse(i,k) - EKF_Hk(i,:)*ChiEKF_X);
             resSEQEKFCHI(i,k) = SEQEKFCHI;
             if (SEQEKFCHI < SEQEKFCHIth)
                 resSEQEKFCHIIndex(i,k) = 1;
-                EKF_Kk = EKF_Px*EKF_Hk(i,:)'/EKF_Sk;
-                EKF_X = EKF_X + EKF_Kk*(Ypse(i,k) - Ht(EKF_X, SensorsPoint(i,:)));
-                EKF_Px = EKF_Px - EKF_Kk*EKF_Sk*EKF_Kk';
+                EKF_Kk = ChiEKF_Px*EKF_Hk(i,:)'/EKF_Sk;
+                ChiEKF_X = ChiEKF_X + EKF_Kk*(Ypse(i,k) - Ht(ChiEKF_X, SensorsPoint(i,:)));
+                ChiEKF_Px = ChiEKF_Px - EKF_Kk*EKF_Sk*EKF_Kk';
             end
         end
         % res
-        resEKF_X(:,k) = EKF_X;
-        resEKF_RMSE(:,k) = sqrt(trace(EKF_Px));
+        resChiEKF_X(:,k) = ChiEKF_X;
+        resEKF_RMSE(:,k) = sqrt(trace(ChiEKF_Px));
         k=k+1;
     end
 
@@ -608,11 +606,11 @@ for mc = 1:MC_times
 
 %% RMSE Evaluate 
     % MC EKF result
-    RMSE_EKF_X(mc, 1) = rmse(resEKF_X(1, :), Xpse(1, 2 : end));
-    RMSE_EKF_X(mc, 2) = rmse(resEKF_X(2, :), Xpse(2, 2 : end));
-    RMSE_EKF_X(mc, 3) = rmse(resEKF_X(3, :), Xpse(3, 2 : end));
-    RMSE_EKF_X(mc, 4) = rmse(resEKF_X(4, :), Xpse(4, 2 : end));
-    RMSE_EKF_X(mc, 5) = rmse(resEKF_X(5, :), Xpse(5, 2 : end));
+    RMSE_CHIEKF_X(mc, 1) = rmse(resChiEKF_X(1, :), Xpse(1, 2 : end));
+    RMSE_CHIEKF_X(mc, 2) = rmse(resChiEKF_X(2, :), Xpse(2, 2 : end));
+    RMSE_CHIEKF_X(mc, 3) = rmse(resChiEKF_X(3, :), Xpse(3, 2 : end));
+    RMSE_CHIEKF_X(mc, 4) = rmse(resChiEKF_X(4, :), Xpse(4, 2 : end));
+    RMSE_CHIEKF_X(mc, 5) = rmse(resChiEKF_X(5, :), Xpse(5, 2 : end));
     % MC VBEKF result
     RMSE_VBEKF_X(mc, 1) = rmse(resVBEKF_X_d(1, :), Xpse(1, 2 : end));
     RMSE_VBEKF_X(mc, 2) = rmse(resVBEKF_X_d(2, :), Xpse(2, 2 : end));
@@ -651,7 +649,7 @@ f1 = figure('Name','f1_true model');
 subplot(5,4,[1,2,5,6]);
 % plot(Xpse(1,:), Xpse(3,:),'-'); hold on;
 plot(Xpse(1,:), Xpse(3,:),'-'); hold on;
-plot(resEKF_X(1,:), resEKF_X(3,:),'-'); hold on;
+plot(resChiEKF_X(1,:), resChiEKF_X(3,:),'-'); hold on;
 plot(resVBEKF_X_d(1,:), resVBEKF_X_d(3,:),'-'); hold on;
 plot(resBIWVBEKF_X_d(1,:), resBIWVBEKF_X_d(3,:),'-'); hold on;
 plot(resBIWVBEKFSEQ_X_d(1,:), resBIWVBEKFSEQ_X_d(3,:),'-'); hold on;
@@ -682,7 +680,7 @@ set(f1,'PaperPositionMode','Auto','PaperUnits','Inches','PaperSize',[pos(3), pos
 
 f2 = figure('Name','f2_estimated states');
 plot(Xpse(1,:), Xpse(3,:),'-'); hold on;
-plot(resEKF_X(1,:), resEKF_X(3,:),'-'); hold on;
+plot(resChiEKF_X(1,:), resChiEKF_X(3,:),'-'); hold on;
 plot(resVBEKF_X_d(1,:), resVBEKF_X_d(3,:),'-'); hold on;
 plot(resBIWVBEKF_X_d(1,:), resBIWVBEKF_X_d(3,:),'-'); hold on;
 plot(resBIWVBEKFSEQ_X_d(1,:), resBIWVBEKFSEQ_X_d(3,:),'-'); hold on;
@@ -713,7 +711,7 @@ set(f3,'PaperPositionMode','Auto','PaperUnits','Inches','PaperSize',[pos(3), pos
 % plot CRLB and RMSE
 f4 = figure('Name','f4_CRLB and RMSE'); 
 plot(Time, [resEKF_RMSE;resVBEKF_RMSE_d;resBIWVBEKF_RMSE_d;resBIWVBEKFSEQ_RMSE_d;resCubCRLB_trLB]'); 
-legend('KF', 'VBEKF', 'BIWVBEKF', 'BIWVBEKFSEQ', 'CRLB'); 
+legend('ChiEKF', 'VBEKF', 'BIWVBEKF', 'BIWVBEKFSEQ', 'CRLB'); 
 set(ylabel(['RMSE error'],'Interpreter','latex')); 
 set(xlabel(['Time($s$)'],'Interpreter','latex')); 
 title("CRLB and RMSE",'Fontsize',10,'Interpreter','Latex'); 
@@ -732,27 +730,17 @@ set(f5,'Units','Inches');
 set(f5,'PaperPositionMode','Auto','PaperUnits','Inches','PaperSize',[pos(3), pos(4)]);
 
 f6 = figure('Name','f6_Bern Zt index');
-subplot(4, 1, 1);
-plot(Time, [resBIWVBZt(1,:); resBIWVBSEQZt(1,:); resSEQEKFCHIIndex(1,:)]);
-set(ylabel('$Zt_1$','Interpreter','latex'));
+subplot(3, 1, 1);
+pcolor(resBIWVBZt);
+set(ylabel('BIGVBEKF','Interpreter','latex'));
+subplot(3, 1, 2);
+pcolor(resBIWVBSEQZt);
+set(ylabel('BIGVBEKFSEQ','Interpreter','latex'));
+subplot(3, 1, 3);
+pcolor(resSEQEKFCHIIndex);
+set(ylabel('ChiEKF','Interpreter','latex'));
 set(xlabel('Time($s$)','Interpreter','latex'));
-title("Sequential Zt",'Fontsize',10,'Interpreter','Latex');
-subplot(4, 1, 2);
-plot(Time, [resBIWVBZt(2,:); resBIWVBSEQZt(2,:); resSEQEKFCHIIndex(2,:)]);
-set(ylabel('$Zt_2$','Interpreter','latex'));
-set(xlabel('Time($s$)','Interpreter','latex'));
-title("Sequential Zt",'Fontsize',10,'Interpreter','Latex');
-subplot(4, 1, 3);
-plot(Time, [resBIWVBZt(3,:); resBIWVBSEQZt(3,:); resSEQEKFCHIIndex(3,:)]);
-set(ylabel('$Zt_3$','Interpreter','latex'));
-set(xlabel('Time($s$)','Interpreter','latex'));
-title("Sequential Zt",'Fontsize',10,'Interpreter','Latex');
-subplot(4, 1, 4);
-plot(Time, [resBIWVBZt(4,:); resBIWVBSEQZt(4,:); resSEQEKFCHIIndex(4,:)]);
-set(ylabel('$Zt_4$','Interpreter','latex'));
-set(xlabel('Time($s$)','Interpreter','latex'));
-title("Sequential Zt",'Fontsize',10,'Interpreter','Latex');
-sgtitle("Bernoulli Zt index",'Fontsize',10,'Interpreter','Latex');
+sgtitle("Bernoulli Zt index  (yellow - accept, blue - reject)",'Fontsize',10,'Interpreter','Latex');
 pos = get(f6,'Position');
 set(f6,'Units','Inches');
 set(f6,'PaperPositionMode','Auto','PaperUnits','Inches','PaperSize',[pos(3), pos(4)]);
@@ -762,15 +750,15 @@ if (MC_times > 1)
     items={'CHIEKFSEQ', 'VBEKF','BIGVBEKF','BIGVBEKFSEQ'};
     % state MC RMSE
     f7 = figure('Name','f7_state MC RMSE');
-    subplot(231);boxplot([RMSE_EKF_X(:,1), RMSE_VBEKF_X(:,1), RMSE_BIWVBEKF_X(:,1), RMSE_BIWVBEKFSEQ_X(:,1)],items,"Colors",C);
+    subplot(231);boxplot([RMSE_CHIEKF_X(:,1), RMSE_VBEKF_X(:,1), RMSE_BIWVBEKF_X(:,1), RMSE_BIWVBEKFSEQ_X(:,1)],items,"Colors",C);
     set(ylabel(['Position $u(m)$'],'Interpreter','latex'));
-    subplot(232);boxplot([RMSE_EKF_X(:,2), RMSE_VBEKF_X(:,2), RMSE_BIWVBEKF_X(:,2), RMSE_BIWVBEKFSEQ_X(:,2)],items,"Colors",C);
+    subplot(232);boxplot([RMSE_CHIEKF_X(:,2), RMSE_VBEKF_X(:,2), RMSE_BIWVBEKF_X(:,2), RMSE_BIWVBEKFSEQ_X(:,2)],items,"Colors",C);
     set(ylabel(['Velocity $\dot{u}(m/s)$'],'Interpreter','latex'));
-    subplot(233);boxplot([RMSE_EKF_X(:,3), RMSE_VBEKF_X(:,3), RMSE_BIWVBEKF_X(:,3), RMSE_BIWVBEKFSEQ_X(:,3)],items,"Colors",C);
+    subplot(233);boxplot([RMSE_CHIEKF_X(:,3), RMSE_VBEKF_X(:,3), RMSE_BIWVBEKF_X(:,3), RMSE_BIWVBEKFSEQ_X(:,3)],items,"Colors",C);
     set(ylabel(['Position $v(m)$'],'Interpreter','latex'));
-    subplot(234);boxplot([RMSE_EKF_X(:,4), RMSE_VBEKF_X(:,4), RMSE_BIWVBEKF_X(:,4), RMSE_BIWVBEKFSEQ_X(:,4)],items,"Colors",C);
+    subplot(234);boxplot([RMSE_CHIEKF_X(:,4), RMSE_VBEKF_X(:,4), RMSE_BIWVBEKF_X(:,4), RMSE_BIWVBEKFSEQ_X(:,4)],items,"Colors",C);
     set(ylabel(['Velocity $\dot{v}(m/s)$'],'Interpreter','latex'));
-    subplot(235);boxplot([RMSE_EKF_X(:,5), RMSE_VBEKF_X(:,5), RMSE_BIWVBEKF_X(:,5), RMSE_BIWVBEKFSEQ_X(:,5)],items,"Colors",C);
+    subplot(235);boxplot([RMSE_CHIEKF_X(:,5), RMSE_VBEKF_X(:,5), RMSE_BIWVBEKF_X(:,5), RMSE_BIWVBEKFSEQ_X(:,5)],items,"Colors",C);
     set(ylabel(['Angular Rate $\omega(rad/s)$'],'Interpreter','latex'));
     sgtitle("Monte-Carlo state RMSE Value",'Fontsize',10,'Interpreter','Latex');
     pos = get(f7,'Position');
