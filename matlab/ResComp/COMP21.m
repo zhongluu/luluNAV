@@ -73,19 +73,17 @@ xlabel(['$t$(s)'],'Interpreter','latex');
 
 % velocity
 figure('Name', 'velocity');
-subplot(3, 1, 1); plot(seqestRes(1:win, end), [seqestRes(1:win, 4),VBseq(1:win,4),AHRS_res4MINE(1:win,4), SPAN_res(1:win,4),avp(1:win,4)]); hold on; % east
-subplot(3, 1, 2); plot(seqestRes(1:win, end), [seqestRes(1:win, 5),VBseq(1:win,5),AHRS_res4MINE(1:win,5), SPAN_res(1:win,5),avp(1:win,5)]); hold on; % north
-subplot(3, 1, 3); plot(seqestRes(1:win, end), [seqestRes(1:win, 6),VBseq(1:win,6),AHRS_res4MINE(1:win,6), SPAN_res(1:win,6),avp(1:win,6)]); hold on; % up
-legend('TCEKF','VBTC','AHRS','SPAN','LCwithCKF');
+subplot(3, 1, 1); plot(seqestRes(1:win, end), [seqestRes(1:win, 4),VBseq(1:win,4),AHRS_res4MINE(1:win,4), SPAN_res(1:win,4),avp(1:win,4),TCCHIestRes(1:win,4)]); hold on; % east
+subplot(3, 1, 2); plot(seqestRes(1:win, end), [seqestRes(1:win, 5),VBseq(1:win,5),AHRS_res4MINE(1:win,5), SPAN_res(1:win,5),avp(1:win,5),TCCHIestRes(1:win,5)]); hold on; % north
+subplot(3, 1, 3); plot(seqestRes(1:win, end), [seqestRes(1:win, 6),VBseq(1:win,6),AHRS_res4MINE(1:win,6), SPAN_res(1:win,6),avp(1:win,6),TCCHIestRes(1:win,6)]); hold on; % up
+legend('TCEKF','VBTC','AHRS','SPAN','LCwithCKF', 'TCChi');
 % position
 figure('Name', 'position');
-subplot(3, 1, 1); plot(seqestRes(1:win, end), [seqestRes(1:win, 7) + biasLat,VBseq(1:win,7) + biasLat,AHRS_res4MINE(1:win,7), SPAN_res(1:win,7),avp(1:win,7)]); hold on; % latitude
-subplot(3, 1, 2); plot(seqestRes(1:win, end), [seqestRes(1:win, 8) + biasLon,VBseq(1:win,8) + biasLon,AHRS_res4MINE(1:win,8), SPAN_res(1:win,8),avp(1:win,8)]); hold on; % longitude
-ylabel(['$\delta p^n_x$ ($m$)'],'Interpreter','latex');
-subplot(3, 1, 3); plot(seqestRes(1:win, end), [seqestRes(1:win, 9) + biasHigh,VBseq(1:win,9) + biasHigh,AHRS_res4MINE(1:win,9), SPAN_res(1:win,9),avp(1:win,9) + biasHigh]); hold on; % height
-ylabel(['$\delta p^n_x$ ($m$)'],'Interpreter','latex');
+subplot(3, 1, 1); plot(seqestRes(1:win, end), [seqestRes(1:win, 7) + biasLat,VBseq(1:win,7) + biasLat,AHRS_res4MINE(1:win,7), SPAN_res(1:win,7),avp(1:win,7),TCCHIestRes(1:win,7)+ biasLat]); hold on; % latitude
+subplot(3, 1, 2); plot(seqestRes(1:win, end), [seqestRes(1:win, 8) + biasLon,VBseq(1:win,8) + biasLon,AHRS_res4MINE(1:win,8), SPAN_res(1:win,8),avp(1:win,8),TCCHIestRes(1:win,8)+ biasLon]); hold on; % longitude
+subplot(3, 1, 3); plot(seqestRes(1:win, end), [seqestRes(1:win, 9) + biasHigh,VBseq(1:win,9) + biasHigh,AHRS_res4MINE(1:win,9), SPAN_res(1:win,9),avp(1:win,9) + biasHigh,TCCHIestRes(1:win,9)+ biasHigh]); hold on; % height
 xlabel(['$t$(s)'],'Interpreter','latex');
-legend('TCEKF','VBTC','AHRS','SPAN','LCwithCKF');
+legend('TCEKF','VBTC','AHRS','SPAN','LCwithCKF', 'TCChi');
 
 % %% error
 

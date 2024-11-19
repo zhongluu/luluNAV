@@ -772,7 +772,7 @@ if (MC_times > 1)
     subplot(222);boxplot([RMSE_VBEKF_R(:,2), RMSE_BIWVBEKF_R(:,2), RMSE_BIWVBEKFSEQ_R(:,2)],items(2:end),"Colors",C);
     set(ylabel(['$R_2$'],'Interpreter','latex'));
     subplot(223);boxplot([RMSE_VBEKF_R(:,3), RMSE_BIWVBEKF_R(:,3), RMSE_BIWVBEKFSEQ_R(:,3)],items(2:end),"Colors",C);
-    set(ylabel(['$R_3$'],'Interpreter','latex'));
+    set(ylabel(['$R_3$'],'Interpreter','latex')); 
     subplot(224);boxplot([RMSE_VBEKF_R(:,4), RMSE_BIWVBEKF_R(:,4), RMSE_BIWVBEKFSEQ_R(:,4)],items(2:end),"Colors",C);
     set(ylabel(['$R_4$'],'Interpreter','latex'));
     sgtitle("Monte-Carlo measurement noise RMSE Value",'Fontsize',10,'Interpreter','Latex');
