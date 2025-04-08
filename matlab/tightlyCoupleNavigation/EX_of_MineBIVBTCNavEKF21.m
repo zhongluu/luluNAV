@@ -45,9 +45,6 @@ initialBiasA = 0.073; % m/s^2
 SIS_err_SD = 1; % Signal in space error SD (m)
 zenith_iono_err_SD = 2; % Zenith ionosphere error SD (m) 
 zenith_trop_err_SD = 0.2; % Zenith troposphere error SD (m) 
-% SIS_err_SD = 0; % Signal in space error SD (m)
-% zenith_iono_err_SD = 0; % Zenith ionosphere error SD (m) 
-% zenith_trop_err_SD = 0; % Zenith troposphere error SD (m) 
 code_track_err_SD = 1; % Code tracking error SD (m) 
 rate_track_err_SD = 0.2; % Range rate tracking error SD (m/s) 
 rx_clock_offset = 10000; % Receiver clock offset at time=0 (m);
@@ -63,7 +60,6 @@ range_rate_SD = 0.01; % Pseudo-range rate measurement noise SD (m/s)
 %            Li Kailong,Lu Xin, Li Wenkui. "Nonlinear Error Model Based on Quaternion for the INS: Analysis and Comparison"
 % init MEKF
 davp0 = avperrset(initialAttiErr, initialVelErr, initialPosErr);
-% initavp = avpadderr(trj.avp0, davp0);
 initavp = trj.avp0';
 opt_q = a2qua(initavp(1:3)); % the actual quaternion for filter
 pos = initavp(7:9);
@@ -85,21 +81,16 @@ Q =  diag([deg2rad((deviationOfGyroV) / 60)^2 * ones(1, 3), (0.8/60)^2 * ones(1,
 R = [pseudo_range_SD^2, range_rate_SD^2];
 seqR = pseudo_range_SD^2;
 % KF Init
-% DKFins = insinit(avpadderr(trj.avp0,davp0), ts);
 DKFins = insinit(trj.avp0', ts);
 DKFP = P;
 DKFins.alpha = zeros(3,1);
-% DKFins.cdrift = GNSSerr.rx_clock_drift;
-% DKFins.coffset = GNSSerr.rx_clock_offset;
 DKFins.lever = [0.1,0.1,0.8]';
 DKFins.dly = 0.005;
 DKFins.cdrift = 0;
 DKFins.coffset = 0;
 seqDKFins = DKFins;
 seqDKFP = DKFP;
-
 map = containers.Map('KeyType','double','ValueType','any');
-
 % prealloc
 len = length(imu);
 [estRes, estNormError, realRes] = prealloc(fix(len / nn), length(X) + 1, 7, length(X));
@@ -121,14 +112,9 @@ for k = 1:nn:len - nn + 1
         curGNSS.no_GNSS = GNSS.no_GNSS(ki, :);
         curGNSS.prn = GNSS.prn(ki,:);
         if curGNSS.no_GNSS(1) > 0
-%             if t < 30
-%                 [seqDKFins, seqDKFP] = seqMEKFCorrectionTC2(seqDKFins, seqDKFP, seqR, curGNSS);
-%             else
             [seqDKFins, seqDKFP] =  MEKFTCNHC(seqDKFins, seqDKFP); 
-            tic;
-            [seqDKFins, seqDKFP, map] = BIVBseqMEKFCorrectionTC2(seqDKFins, seqDKFP, map, curGNSS, ki);
-            VBTCtime(ki) = toc;
-%             end
+            [seqDKFins, seqDKFP, map, time] = BIVBseqMEKFCorrectionTC2(seqDKFins, seqDKFP, map, curGNSS, ki);
+            VBTCtime(ki) = time;
         end
         % measurement updating completing
 
@@ -145,16 +131,19 @@ end
 valueList = values(map);
 [~,n] = size(valueList);
 Rt = zeros(n,ki);
+SatUsedt = zeros(n,4,ki);
 for i =1:n
     curVBMInfo = valueList{i};
     m = length(curVBMInfo.time);
     for j = 1:m
         Rt(i,curVBMInfo.time(j)) = curVBMInfo.Rt(j);
+        SatUsedt(i,:,curVBMInfo.time(j)) = curVBMInfo.SatAndPRt(j,:);
     end
 end
 keyList = keys(map);
 [~,n] = size(keyList);
 seqestRes(ki:end,:) = [];
+VBseq = seqestRes;
 %% plot
 % attitude
 figure('Name', 'attitude');
@@ -219,8 +208,6 @@ figure('Name', 'VB estimation R');
 VBR = pcolor(Rt); VBR.LineStyle=":";VBR.LineWidth = 0.1;
 colormap([[1 1 1];turbo(100000)]);
 
-VBseq = seqestRes;
-
 % MEKF filter basic function
 function [ins, P] = MEKFPredictionTC2(ins, P, Q, wvm, nts)
     % neccessary parameters
@@ -251,7 +238,7 @@ function [ins, P] = MEKFPredictionTC2(ins, P, Q, wvm, nts)
 
 end
 
-function [ins, P, map] = BIVBseqMEKFCorrectionTC2(ins, P, map, GNSS, t)
+function [ins, P, map, time] = BIVBseqMEKFCorrectionTC2(ins, P, map, GNSS, t)
     lightspeed = 299792458; % Speed of light in m/s
     % get state nums and valid GNSS nums
     prn = GNSS.prn;
@@ -280,6 +267,7 @@ function [ins, P, map] = BIVBseqMEKFCorrectionTC2(ins, P, map, GNSS, t)
                 curVBMInfo.et = e0;
                 curVBMInfo.ft = f0;
                 curVBMInfo.R = R0;
+                curVBMInfo.SatAndPR = zeros(1,4);
             end
             curVBMInfo.isValid = curUsed;
         else
@@ -292,6 +280,7 @@ function [ins, P, map] = BIVBseqMEKFCorrectionTC2(ins, P, map, GNSS, t)
             curVBMInfo.R = R0;
             curVBMInfo.Rt = [];
             curVBMInfo.time = [];
+            curVBMInfo.SatAndPRt = [];
         end
         curVBMInfo.isValid = curUsed;
         curVBMInfo.IGa = 0.5 + curVBMInfo.IGa;
@@ -313,7 +302,7 @@ function [ins, P, map] = BIVBseqMEKFCorrectionTC2(ins, P, map, GNSS, t)
         delta_r = C_e_I * sat_r_es_e' - r_ea_e;
         obs_meas = sqrt(delta_r' * delta_r) + ins.coffset; % for range     
 
-        H = [zeros(1,3), zeros(1,3), u_as_e'*parXYZBLH,  zeros(1,6),u_as_e'*ins.MpvCnb, u_as_e'*ins.Mpvvn  1, 0]; % for range
+        H = [zeros(1,3), zeros(1,3), u_as_e'*parXYZBLH,  zeros(1,6),-u_as_e'*ins.MpvCnb, u_as_e'*ins.Mpvvn  1, 0]; % for range
         rV = GNSS(i,1)+staDly(i) +lonoDly(i) +  tropDly(i);
         X = zeros(21,1);
         % VB
@@ -322,10 +311,12 @@ function [ins, P, map] = BIVBseqMEKFCorrectionTC2(ins, P, map, GNSS, t)
                 %
                 preX = X;
                 curVBMInfo.R = curVBMInfo.IGb / curVBMInfo.IGa;
+                tic;
                 innov_cov = H * tmpP * H' + curVBMInfo.R/curVBMInfo.Zt;
                 KGain = tmpP * H' * invbc(innov_cov); 
                 X = KGain * (rV - obs_meas); 
                 P = tmpP - KGain * innov_cov * KGain'; 
+                oneTime = toc;
                 % 
                 tmpPos = ins.posL -  X(7:9) + ins.MpvCnb*X(16:18) - ins.Mpvvn *X(19);
                 [r_ea_e, ~] = blh2xyz(tmpPos);
@@ -344,6 +335,7 @@ function [ins, P, map] = BIVBseqMEKFCorrectionTC2(ins, P, map, GNSS, t)
                 curVBMInfo.et = e0+curVBMInfo.Zt;
                 curVBMInfo.ft = f0+1-curVBMInfo.Zt;
                 curVBMInfo.index =0;
+                curVBMInfo.SatAndPR = [sat_r_es_e,rV];
                 err = norm((X - preX));
                 if err < errTH
                     break;
@@ -354,6 +346,7 @@ function [ins, P, map] = BIVBseqMEKFCorrectionTC2(ins, P, map, GNSS, t)
                 curVBMInfo.IGb = tmpIGb;
                 curVBMInfo.IGa = curVBMInfo.IGa - 0.5;
                 curVBMInfo.R = curVBMInfo.IGb / curVBMInfo.IGa;
+                curVBMInfo.SatAndPR = zeros(1,4);
                 curVBMInfo.index =400;
                 break;
             end
@@ -361,7 +354,7 @@ function [ins, P, map] = BIVBseqMEKFCorrectionTC2(ins, P, map, GNSS, t)
         if curVBMInfo.R == 0
             pause;
         end
-        map(prn(i)) = curVBMInfo;
+        
         % cal H matrix
         % feedback
         ins.qnb = qdelphi(ins.qnb,  X(1:3)); 
@@ -375,6 +368,11 @@ function [ins, P, map] = BIVBseqMEKFCorrectionTC2(ins, P, map, GNSS, t)
         ins.cdrift = ins.cdrift + X(21);
         [ins.qnb, ins.att, ins.Cnb] = attsyn(ins.qnb);
         ins.avp = [ins.att; ins.vn; ins.pos];
+        % if you want to evaluate the whole time consumption,
+        % move oneTime = toc; at here.
+        time.onetime(i) = oneTime;
+        time.alltime = time.alltime + oneTime;
+        map(prn(i)) = curVBMInfo;
     % reset the RV
         ins.alpha = zeros(3, 1);
     end
@@ -386,15 +384,18 @@ function [ins, P, map] = BIVBseqMEKFCorrectionTC2(ins, P, map, GNSS, t)
         if curVBMInfo.isValid == curUsed
             if curVBMInfo.index == 0
                 curVBMInfo.Rt = [curVBMInfo.Rt,curVBMInfo.R];
+                curVBMInfo.SatAndPRt = [curVBMInfo.SatAndPRt; curVBMInfo.SatAndPR];
                 curVBMInfo.time = [curVBMInfo.time, t];
             else
                 curVBMInfo.Rt = [curVBMInfo.Rt,curVBMInfo.index];
+                curVBMInfo.SatAndPRt = [curVBMInfo.SatAndPRt; zeros(1,4)];
                 curVBMInfo.time = [curVBMInfo.time, t];
             end
             curVBMInfo.isValid = noDefined;
         else
             curVBMInfo.isValid = init;
             curVBMInfo.Rt = [curVBMInfo.Rt, 0];
+            curVBMInfo.SatAndPRt = [curVBMInfo.SatAndPRt; zeros(1,4)];
             curVBMInfo.time = [curVBMInfo.time, t];
         end
         map(keyList{i}) = curVBMInfo;

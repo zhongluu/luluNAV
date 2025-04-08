@@ -261,8 +261,6 @@ end
 
 function [ins, P, ChiRes, Chiindex, map] = seqMEKFCorrectionTC2(ins, P, R, GNSS, ChiTH, map,t)
     lightspeed = 299792458; % Speed of light in m/s
-    % get state nums and valid GNSS nums
-    [stateNum, ~] = size(P);
     % no_GNSS(2) inidicate current time
     no_GNSS = GNSS.no_GNSS;
     
@@ -288,18 +286,19 @@ function [ins, P, ChiRes, Chiindex, map] = seqMEKFCorrectionTC2(ins, P, R, GNSS,
         else
             curVBMInfo.ChiRes = [];
             curVBMInfo.ChiIndex = [];
+            curVBMInfo.SatAndPRt = [];
             curVBMInfo.time = [];
         end
 
-
-    ins = inslever(ins);
-    ins.posL = ins.posL-ins.Mpvvn * ins.dly;
-    Pn = ins.posL;
-    [Pe, Cen] = blh2xyz(Pn);
+        tic;
+        ins = inslever(ins);
+        ins.posL = ins.posL-ins.Mpvvn * ins.dly;
+        Pn = ins.posL;
+        [Pe, Cen] = blh2xyz(Pn);
 
     % cal est obs value range and range rate and H matrix
 
-    r_ea_e = Pe; 
+        r_ea_e = Pe; 
 
         sat_r_es_e = GNSS(i, 2:4); 
         delta_r = sat_r_es_e' - r_ea_e;
@@ -312,7 +311,7 @@ function [ins, P, ChiRes, Chiindex, map] = seqMEKFCorrectionTC2(ins, P, R, GNSS,
 
         % cal H matrix
 
-        H = [zeros(1,3), zeros(1,3), u_as_e'*parXYZBLH,  zeros(1,6),u_as_e'*ins.MpvCnb, u_as_e'*ins.Mpvvn  1, 0]; % for range
+        H = [zeros(1,3), zeros(1,3), u_as_e'*parXYZBLH,  zeros(1,6), -u_as_e'*ins.MpvCnb, u_as_e'*ins.Mpvvn  1, 0]; % for range
 
         rV = GNSS(i,1)+staDly(i) +lonoDly(i) +  tropDly(i);
         innov_cov = H * P * H' + R; 
@@ -342,13 +341,16 @@ function [ins, P, ChiRes, Chiindex, map] = seqMEKFCorrectionTC2(ins, P, R, GNSS,
             % reset the RV
             ins.alpha = zeros(3, 1);
             curVBMInfo.ChiIndex = [curVBMInfo.ChiIndex, 1];
+            curVBMInfo.SatAndPRt = [curVBMInfo.SatAndPRt;sat_r_es_e, rV];
             curVBMInfo.time = [curVBMInfo.time, t];
         else
             Chiindex(i) = 1;
             curVBMInfo.ChiIndex = [curVBMInfo.ChiIndex,2];
+            curVBMInfo.SatAndPRt = [curVBMInfo.SatAndPRt;zeros(1,4)];
             curVBMInfo.time = [curVBMInfo.time, t];
         end
-        
+        oneTime = toc;
+        time  = time+ oneTime;
         map(prn(i)) = curVBMInfo;
     end
     % kalman measurement update  
