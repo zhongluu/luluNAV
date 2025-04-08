@@ -11,5 +11,5 @@
 6. B. D. Chen, X. Liu, H. Q. Zhao, and J. C. Principe, “Maximum correntropy Kalman filter,” Automatica, vol. 76, pp. 70–77, Feb. 2017.
 
 # Acknowledgment:
-Thanks Dr. Gongmin Yan's open source code psins toolbox from https://www.psins.org.cn/ in Northwestern Polytechnical University of P.R.China.
+Thanks Dr. Gongmin Yan's open source code psins toolbox from https://www.psins.org.cn/ in Northwestern Polytechnical University of P.R.China.\
 Thanks Dr. Yulong Huang's open source code from his ResearchGate.

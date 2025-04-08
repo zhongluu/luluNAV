@@ -55,9 +55,8 @@ changing the tight couple navigation inital configuration in "[*./config/insEXco
 ## 4 Decorator to the parse class
 ## 5 DMA for single core CPU
 ## 6 Support for linux kernel mode
-## 7 EPH (ephemeris) data disposition processing for range rate measurement
-## 8 Support range rate measurement for TCINS
-## 9 Coarse alignment
+## 7 Support range rate measurement for TCINS
+## 8 Coarse alignment
 
 # File Description
 	|-- ..LULUNAV
@@ -86,7 +85,7 @@ changing the tight couple navigation inital configuration in "[*./config/insEXco
 4. If you want to running the Matlab code, the psins toolbox must be applied from  https://www.psins.org.cn/
 5. There are slight differences between the result of C++ and the result of Matlab.
 6. A GPL license is used in mine code, commercial using is not allowed without permission
-7. The corresponding work was submitted to "*IEEE Internet of Things Journal*" on 13/11/2024 with manuscript ID: IoT-43958-2024.
+7. The corresponding work was resubmitted to "*IEEE Internet of Things Journal*" on 08/04/2025 with manuscript ID: IoT-49500-2025.
 
 # Estimation Result:
 ## Novel method estimation result
@@ -134,8 +133,10 @@ R estimation:
 ![VBAttitude](./img/VBR.jpg "VBR")
 
 # Acknowledgment:
-Thanks Dr. Gongmin Yan's open source code psins toolbox from https://www.psins.org.cn/ in Northwestern Polytechnical University of P.R.China.
-
+Thanks Dr. Gongmin Yan's open source code psins toolbox from https://www.psins.org.cn/ in Northwestern Polytechnical University of P.R.China.\
+Thanks Dr. Yulong Huang's open source code from his ResearchGate in Harbin Engineering University of P.R.China.\
+Thanks Dr. T. Takasu open source RTKLIB from https://www.rtklib.com/ in Tokyo University of Marine Science and Technology
 #
 data: 09/11/2024 \
-lu email: zhong.yulu.ll@gmail.com or yulu_zhong@seu.edu.cn
+lu email: zhong.yulu.ll@gmail.com or yulu_zhong@seu.edu.cn \
+Ephemeris-enabled functionality will be available in the branch version
