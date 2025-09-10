@@ -1,9 +1,0 @@
-Event Log File
-1730347978TCINS Running...
-1730348719:GNSS time out in measurement update
-1730348720:GNSS time out in measurement update
-1730348721:GNSS time out in measurement update
-1730348722:GNSS time out in measurement update
-1730348723:GNSS time out in measurement update
-1730348724:GNSS time out in measurement update
-1730348726:GNSS time out in measurement update
